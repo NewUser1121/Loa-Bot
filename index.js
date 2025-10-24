@@ -5,7 +5,7 @@ import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from "di
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Self-ping to keep bot alive
+// Keep-alive webserver
 app.get("/", (req, res) => res.send("Bot is alive!"));
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
@@ -15,12 +15,13 @@ app.listen(port, () => {
 });
 
 // Discord bot setup
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+});
 
-const TOKEN = "MTQzMTQwOTA0NTcwODczNDUwNw.Gmtevd.aPcF7Jcd72lzqkB4vCbYimQgxUrVVAoLITIWSk";
+const TOKEN = MTQzMTQwOTA0NTcwODczNDUwNw.Gmtevd.aPcF7Jcd72lzqkB4vCbYimQgxUrVVAoLITIWSk;
 const CLIENT_ID = 1431409045708734507;
 
-// Slash command definition
 const commands = [
   new SlashCommandBuilder()
     .setName("loa")
@@ -39,10 +40,10 @@ const commands = [
       option.setName("reason")
         .setDescription("The reason for your LOA")
         .setRequired(true)
-    )
-].map(command => command.toJSON());
+    ),
+].map(cmd => cmd.toJSON());
 
-// Register commands
+// Register slash commands
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 (async () => {
@@ -51,16 +52,14 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
     await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
     console.log("Slash commands registered!");
   } catch (err) {
-    console.error(err);
+    console.error("Error registering commands:", err);
   }
 })();
 
-// On bot ready
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-// Command handler
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName === "loa") {
@@ -76,7 +75,10 @@ End: ${timeend}
 Reason: ${reason}
 `;
 
-    await interaction.reply({ content: message, allowedMentions: { users: [interaction.user.id] } });
+    await interaction.reply({
+      content: message,
+      allowedMentions: { users: [interaction.user.id] },
+    });
   }
 });
 
