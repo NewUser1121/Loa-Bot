@@ -1,5 +1,7 @@
 import express from "express";
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from "discord.js";
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder } from "discord.js";
+
+let mode = 2; // set to 1 (plain text) or 2 (embed)
 
 const app = express();
 const port = process.env.PORT || 10000;
@@ -29,7 +31,6 @@ async function registerCommandsForGuild(guildId) {
   try {
     const appId = client.user?.id;
     if (!appId) return;
-    console.log(`Registering commands for guild ${guildId}...`);
     await rest.put(Routes.applicationGuildCommands(appId, guildId), { body: commands });
     console.log(`Commands registered for guild ${guildId}`);
   } catch (err) {
@@ -38,7 +39,6 @@ async function registerCommandsForGuild(guildId) {
 }
 
 client.on("guildCreate", async (guild) => {
-  console.log(`Joined guild: ${guild.name} (${guild.id})`);
   await registerCommandsForGuild(guild.id);
 });
 
@@ -51,25 +51,54 @@ client.on("interactionCreate", async (interaction) => {
   const reason = interaction.options.getString("reason");
   const user = interaction.user;
 
-  const message = `<@${user.id}>\n# __LOA__\n> ## Start: ${timestart}\n> ## End: ${timeend}\n> ## Reason: ${reason}`;
-
-  try {
-    if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({ content: message, allowedMentions: { users: [user.id] } });
-      return;
-    }
-    await interaction.followUp({ content: message, allowedMentions: { users: [user.id] } });
-  } catch (err) {
-    console.warn("Reply/followUp failed, attempting channel fallback:", err);
+  if (mode === 1) {
+    const message = `<@${user.id}>\nLoa\nStart: ${timestart}\nEnd: ${timeend}\nReason: ${reason}`;
     try {
-      if (interaction.channel) {
-        await interaction.channel.send({ content: message, allowedMentions: { users: [user.id] } });
-      } else {
-        console.error("No channel available for fallback send.");
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: message, allowedMentions: { users: [user.id] } });
+        return;
       }
-    } catch (err2) {
-      console.error("Fallback send failed:", err2);
+      await interaction.followUp({ content: message, allowedMentions: { users: [user.id] } });
+    } catch (err) {
+      try {
+        if (interaction.channel) {
+          await interaction.channel.send({ content: message, allowedMentions: { users: [user.id] } });
+        }
+      } catch (err2) {
+        console.error("Fallback send failed:", err2);
+      }
     }
+    return;
+  }
+
+  if (mode === 2) {
+    const avatarUrl = user.displayAvatarURL({ extension: "png", size: 1024 });
+    const embed = new EmbedBuilder()
+      .setColor(0x0b3d91)
+      .setAuthor({ name: `<@${user.id}>`, iconURL: avatarUrl })
+      .setTitle("Loa")
+      .addFields(
+        { name: "**Start**", value: timestart || "N/A", inline: false },
+        { name: "**End**", value: timeend || "N/A", inline: false },
+        { name: "__**Reason**__", value: reason || "N/A", inline: false }
+      );
+
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ embeds: [embed] });
+        return;
+      }
+      await interaction.followUp({ embeds: [embed] });
+    } catch (err) {
+      try {
+        if (interaction.channel) {
+          await interaction.channel.send({ embeds: [embed] });
+        }
+      } catch (err2) {
+        console.error("Fallback embed send failed:", err2);
+      }
+    }
+    return;
   }
 });
 
@@ -78,20 +107,11 @@ async function onReady() {
   if (initialized) return;
   initialized = true;
   console.log(`Logged in as ${client.user.tag}`);
-
   try {
     await client.guilds.fetch();
-  } catch (err) {
-    console.warn("Failed to fetch guilds:", err);
-  }
-
-  for (const [guildId, guild] of client.guilds.cache) {
-    try {
-      console.log(`Registering commands for: ${guild.name} (${guildId})`);
-      await registerCommandsForGuild(guildId);
-    } catch (err) {
-      console.error("Error registering for guild:", guildId, err);
-    }
+  } catch {}
+  for (const [guildId] of client.guilds.cache) {
+    await registerCommandsForGuild(guildId);
   }
 }
 
