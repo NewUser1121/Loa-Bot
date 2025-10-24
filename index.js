@@ -43,23 +43,42 @@ const commands = [
     ),
 ].map(cmd => cmd.toJSON());
 
-// Register slash commands
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
-(async () => {
+// Register commands for each guild when bot joins
+client.on("guildCreate", async (guild) => {
   try {
-    console.log("Registering slash commands...");
-    await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
-    console.log("Slash commands registered!");
+    console.log(`🔹 Joined new guild: ${guild.name} (${guild.id})`);
+    await rest.put(
+      Routes.applicationGuildCommands(CLIENT_ID, guild.id),
+      { body: commands }
+    );
+    console.log(`✅ Commands registered for guild: ${guild.name}`);
   } catch (err) {
-    console.error("Error registering commands:", err);
+    console.error("Error registering commands for new guild:", err);
   }
-})();
-
-client.once("clientReady", () => {
-  console.log(`Logged in as ${client.user.tag}`);
 });
 
+// Register commands for all guilds on startup
+client.once("ready", async () => {
+  console.log(`🤖 Logged in as ${client.user.tag}`);
+
+  try {
+    const guilds = await client.guilds.fetch();
+    for (const [guildId, guild] of guilds) {
+      console.log(`Registering commands for: ${guild.name} (${guildId})`);
+      await rest.put(
+        Routes.applicationGuildCommands(CLIENT_ID, guildId),
+        { body: commands }
+      );
+      console.log(`✅ Commands registered for ${guild.name}`);
+    }
+  } catch (err) {
+    console.error("Error registering commands on startup:", err);
+  }
+});
+
+// Handle /loa command
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName === "loa") {
@@ -83,4 +102,3 @@ Reason: ${reason}
 });
 
 client.login(TOKEN);
-
