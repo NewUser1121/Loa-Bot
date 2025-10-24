@@ -19,8 +19,8 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
 });
 
-const TOKEN = MTQzMTQwOTA0NTcwODczNDUwNw.Gmtevd.aPcF7Jcd72lzqkB4vCbYimQgxUrVVAoLITIWSk;
-const CLIENT_ID = 1431409045708734507;
+const TOKEN = process.env.DISCORD_TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
 
 const commands = [
   new SlashCommandBuilder()
@@ -83,3 +83,4 @@ Reason: ${reason}
 });
 
 client.login(TOKEN);
+
