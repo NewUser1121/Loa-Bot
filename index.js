@@ -5,14 +5,28 @@ import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from "di
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Keep-alive webserver
+// Keep-alive ping
 app.get("/", (req, res) => res.send("Bot is alive!"));
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+
+  const renderUrl = process.env.RENDER_EXTERNAL_URL
+    ? `https://${process.env.RENDER_EXTERNAL_URL}`
+    : `http://localhost:${port}`;
+
+  console.log("Pinging the fricken bot to make it not go zzz :)");
+  fetch(renderUrl)
+    .then(() => console.log("✅ Initial ping successful"))
+    .catch((err) => console.error("❌ Initial ping failed:", err));
+
   setInterval(() => {
-    fetch(`https://${process.env.RENDER_EXTERNAL_URL || "localhost:" + port}`).catch(() => {});
-  }, 90 * 1000);
+    console.log("Pinging the fricken bot to make it not go zzz :)");
+    fetch(renderUrl)
+      .then(() => console.log("✅ Ping successful"))
+      .catch((err) => console.error("❌ Ping failed:", err));
+  }, 60 * 1000);
 });
+
 
 // Discord bot setup
 const client = new Client({
@@ -45,7 +59,6 @@ const commands = [
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
-// Register commands for each guild when bot joins
 client.on("guildCreate", async (guild) => {
   try {
     console.log(`🔹 Joined new guild: ${guild.name} (${guild.id})`);
@@ -59,7 +72,6 @@ client.on("guildCreate", async (guild) => {
   }
 });
 
-// Register commands for all guilds on startup
 client.once("ready", async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 
@@ -78,7 +90,7 @@ client.once("ready", async () => {
   }
 });
 
-// Handle /loa command
+// /loa command
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName === "loa") {
@@ -102,3 +114,4 @@ Reason: ${reason}
 });
 
 client.login(TOKEN);
+
