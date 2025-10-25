@@ -12,10 +12,13 @@ if (!TOKEN) {
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
+// Add the "made by" superscript text to the command description
+const MADE_BY = " ᵐᵃᵈᵉ ᵇʸ ˢⁱᶜᵒᵏᵃˡᵉᵇ";
+
 const commands = [
   new SlashCommandBuilder()
     .setName("loa")
-    .setDescription("Submit a Leave of Absence (LOA) ᵐᵃᵈᵉ ᵇʸ ˢⁱᶜᵒᵏᵃˡᵉᵇ")
+    .setDescription("Submit a Leave of Absence (LOA)" + MADE_BY)
     .addStringOption(o => o.setName("timestart").setDescription("The date your LOA starts").setRequired(true))
     .addStringOption(o => o.setName("timeend").setDescription("The date your LOA ends").setRequired(true))
     .addStringOption(o => o.setName("reason").setDescription("The reason for your LOA").setRequired(true))
@@ -23,18 +26,28 @@ const commands = [
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
+async function clearGlobalCommands(appId) {
+  try {
+    await rest.put(Routes.applicationCommands(appId), { body: [] });
+    console.log("Cleared global commands for application", appId);
+  } catch (err) {
+    console.error("Failed to clear global commands:", err);
+  }
+}
+
 async function registerCommandsForGuild(guildId) {
   try {
     const appId = client.user?.id;
     if (!appId) return;
     await rest.put(Routes.applicationGuildCommands(appId, guildId), { body: commands });
-    console.log(`Commands registered for guild ${guildId}`);
+    console.log(`Registered commands for guild ${guildId}`);
   } catch (err) {
     console.error("Failed to register commands for guild", guildId, err);
   }
 }
 
 client.on("guildCreate", async (guild) => {
+  console.log(`Joined guild: ${guild.name} (${guild.id})`);
   await registerCommandsForGuild(guild.id);
 });
 
@@ -54,15 +67,16 @@ client.on("interactionCreate", async (interaction) => {
   const user = interaction.user;
 
   const embed = new EmbedBuilder()
+    .setTitle("Time")
     .setDescription(`<@${user.id}>`)
     .setColor(11092453)
     .setAuthor({ name: "Leave Of Absence", url: "https://discordapp.com" })
     .setThumbnail(user.displayAvatarURL({ extension: "png", dynamic: true, size: 1024 }))
-    .addFields({
-      name: "Time",
-      value: `**Start:** ${start}\n**End:** ${end}\n**Reason:** __${reason}__`,
-      inline: true
-    });
+    .addFields(
+      { name: "Start", value: `**${start}**`, inline: false },
+      { name: "End", value: `**${end}**`, inline: false },
+      { name: "Reason", value: `**__${reason}__**`, inline: false }
+    );
 
   const options = { embeds: [embed], allowedMentions: { users: [user.id] } };
 
@@ -87,20 +101,30 @@ let initialized = false;
 async function onReady() {
   if (initialized) return;
   initialized = true;
+
   console.log(`Logged in as ${client.user.tag}`);
-  try { await client.guilds.fetch(); } catch {}
-  for (const [guildId] of client.guilds.cache) {
+
+  // Clear global commands (removes the top "global" autocomplete entry)
+  const appId = client.user.id;
+  await clearGlobalCommands(appId);
+
+  // Ensure guild list is loaded
+  try { await client.guilds.fetch(); } catch (e) {}
+
+  // Register commands for all guilds we're in (guild-scoped -> instant)
+  for (const [guildId, guild] of client.guilds.cache) {
     await registerCommandsForGuild(guildId);
   }
 }
 
 client.once("ready", onReady);
-client.once("clientReady", onReady);
 
+// simple webserver for Render keep-alive
 app.get("/", (req, res) => res.send("Bot is alive"));
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-  let renderUrl = process.env.RENDER_EXTERNAL_URL || process.env.EXTERNAL_URL || process.env.FORCED_EXTERNAL_URL || "";
+
+  let renderUrl = process.env.RENDER_EXTERNAL_URL || process.env.EXTERNAL_URL || "";
   if (!renderUrl) renderUrl = `http://localhost:${port}`;
   else if (!renderUrl.startsWith("http")) renderUrl = `https://${renderUrl}`;
 
