@@ -12,9 +12,7 @@ if (!TOKEN) {
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// Add the "made by" superscript text to the command description
 const MADE_BY = " ᵐᵃᵈᵉ ᵇʸ ˢⁱᶜᵒᵏᵃˡᵉᵇ";
-
 const commands = [
   new SlashCommandBuilder()
     .setName("loa")
@@ -67,16 +65,15 @@ client.on("interactionCreate", async (interaction) => {
   const user = interaction.user;
 
   const embed = new EmbedBuilder()
-    .setTitle("Time")
     .setDescription(`<@${user.id}>`)
     .setColor(11092453)
     .setAuthor({ name: "Leave Of Absence", url: "https://discordapp.com" })
     .setThumbnail(user.displayAvatarURL({ extension: "png", dynamic: true, size: 1024 }))
-    .addFields(
-      { name: "Start", value: `**${start}**`, inline: false },
-      { name: "End", value: `**${end}**`, inline: false },
-      { name: "Reason", value: `**__${reason}__**`, inline: false }
-    );
+    .addFields({
+      name: "Time",
+      value: `**Start:** ${start}\n**End:** ${end}\n**Reason:** __${reason}__`,
+      inline: true
+    });
 
   const options = { embeds: [embed], allowedMentions: { users: [user.id] } };
 
@@ -104,22 +101,16 @@ async function onReady() {
 
   console.log(`Logged in as ${client.user.tag}`);
 
-  // Clear global commands (removes the top "global" autocomplete entry)
   const appId = client.user.id;
   await clearGlobalCommands(appId);
-
-  // Ensure guild list is loaded
   try { await client.guilds.fetch(); } catch (e) {}
 
-  // Register commands for all guilds we're in (guild-scoped -> instant)
   for (const [guildId, guild] of client.guilds.cache) {
     await registerCommandsForGuild(guildId);
   }
 }
 
 client.once("ready", onReady);
-
-// simple webserver for Render keep-alive
 app.get("/", (req, res) => res.send("Bot is alive"));
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
@@ -150,3 +141,4 @@ client.login(TOKEN).catch(err => {
   console.error("Login failed:", err);
   process.exit(1);
 });
+
