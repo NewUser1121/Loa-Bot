@@ -6,11 +6,11 @@ const port = process.env.PORT || 10000;
 
 const TOKEN = process.env.TOKEN || process.env.DISCORD_TOKEN;
 if (!TOKEN) {
-  console.error("ERROR: no bot token found. Set TOKEN or DISCORD_TOKEN in environment variables.");
+  console.error("ERROR: missing TOKEN / DISCORD_TOKEN env var");
   process.exit(1);
 }
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 const commands = [
   new SlashCommandBuilder()
@@ -35,16 +35,21 @@ async function registerCommandsForGuild(guildId) {
 }
 
 client.on("guildCreate", async (guild) => {
-  console.log(`Joined guild: ${guild.name} (${guild.id})`);
   await registerCommandsForGuild(guild.id);
 });
+
+const processedInteractions = new Set();
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName !== "loa") return;
 
-  const timestart = interaction.options.getString("timestart");
-  const timeend = interaction.options.getString("timeend");
+  if (processedInteractions.has(interaction.id)) return;
+  processedInteractions.add(interaction.id);
+  setTimeout(() => processedInteractions.delete(interaction.id), 60 * 1000);
+
+  const start = interaction.options.getString("timestart");
+  const end = interaction.options.getString("timeend");
   const reason = interaction.options.getString("reason");
   const user = interaction.user;
 
@@ -53,24 +58,27 @@ client.on("interactionCreate", async (interaction) => {
     .setColor(11092453)
     .setAuthor({ name: "Leave Of Absence", url: "https://discordapp.com" })
     .setThumbnail(user.displayAvatarURL({ extension: "png", dynamic: true, size: 1024 }))
-    .addFields({ name: "Time", value: `Start: ${timestart} \nEnd: ${timeend}`, inline: true });
+    .addFields({
+      name: "Time",
+      value: `**Start:** ${start}\n**End:** ${end}\n**Reason:** __${reason}__`,
+      inline: true
+    });
 
-  const replyOptions = { embeds: [embed], allowedMentions: { users: [user.id] } };
+  const options = { embeds: [embed], allowedMentions: { users: [user.id] } };
 
   try {
     if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply(replyOptions);
+      await interaction.reply(options);
       return;
     }
-    await interaction.followUp(replyOptions);
+    await interaction.followUp(options);
   } catch (err) {
-    console.warn("Interaction reply failed, attempting channel fallback:", err);
     try {
       if (interaction.channel) {
-        await interaction.channel.send(replyOptions);
+        await interaction.channel.send(options);
       }
     } catch (err2) {
-      console.error("Fallback channel send failed:", err2);
+      console.error("Fallback send failed:", err2);
     }
   }
 });
@@ -90,10 +98,8 @@ client.once("ready", onReady);
 client.once("clientReady", onReady);
 
 app.get("/", (req, res) => res.send("Bot is alive"));
-
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-
   let renderUrl = process.env.RENDER_EXTERNAL_URL || process.env.EXTERNAL_URL || process.env.FORCED_EXTERNAL_URL || "";
   if (!renderUrl) renderUrl = `http://localhost:${port}`;
   else if (!renderUrl.startsWith("http")) renderUrl = `https://${renderUrl}`;
@@ -113,8 +119,8 @@ app.listen(port, () => {
 });
 
 client.on("error", (err) => console.error("Client error:", err));
-process.on("unhandledRejection", (reason) => console.error("Unhandled Rejection:", reason));
-process.on("uncaughtException", (err) => console.error("Uncaught Exception:", err));
+process.on("unhandledRejection", (r) => console.error("Unhandled Rejection:", r));
+process.on("uncaughtException", (e) => console.error("Uncaught Exception:", e));
 
 client.login(TOKEN).catch(err => {
   console.error("Login failed:", err);
