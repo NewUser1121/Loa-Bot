@@ -54,15 +54,16 @@ client.on("interactionCreate", async (interaction) => {
   const user = interaction.user;
 
   const embed = new EmbedBuilder()
+    .setTitle("Time")
     .setDescription(`<@${user.id}>`)
     .setColor(11092453)
     .setAuthor({ name: "Leave Of Absence", url: "https://discordapp.com" })
     .setThumbnail(user.displayAvatarURL({ extension: "png", dynamic: true, size: 1024 }))
-    .addFields({
-      name: "Time",
-      value: `**Start:** ${start}\n**End:** ${end}\n**Reason:** __${reason}__`,
-      inline: true
-    });
+    .addFields(
+      { name: "Start", value: `**${start}**`, inline: false },
+      { name: "End", value: `**${end}**`, inline: false },
+      { name: "Reason", value: `**__${reason}__**`, inline: false }
+    );
 
   const options = { embeds: [embed], allowedMentions: { users: [user.id] } };
 
