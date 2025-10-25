@@ -3,8 +3,8 @@ import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuil
 
 const app = express();
 const port = process.env.PORT || 10000;
-
 const TOKEN = process.env.TOKEN || process.env.DISCORD_TOKEN;
+
 if (!TOKEN) {
   console.error("ERROR: missing TOKEN / DISCORD_TOKEN env var");
   process.exit(1);
@@ -37,6 +37,12 @@ async function registerCommandsForGuild(guildId) {
   try {
     const appId = client.user?.id;
     if (!appId) return;
+    
+    // Clear existing guild commands first
+    await rest.put(Routes.applicationGuildCommands(appId, guildId), { body: [] });
+    console.log(`Cleared commands for guild ${guildId}`);
+    
+    // Then register the new ones
     await rest.put(Routes.applicationGuildCommands(appId, guildId), { body: commands });
     console.log(`Registered commands for guild ${guildId}`);
   } catch (err) {
@@ -54,7 +60,6 @@ const processedInteractions = new Set();
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName !== "loa") return;
-
   if (processedInteractions.has(interaction.id)) return;
   processedInteractions.add(interaction.id);
   setTimeout(() => processedInteractions.delete(interaction.id), 60 * 1000);
@@ -64,6 +69,8 @@ client.on("interactionCreate", async (interaction) => {
   const reason = interaction.options.getString("reason");
   const user = interaction.user;
 
+// If you ever want to change how the embed looks, change below here.
+  
   const embed = new EmbedBuilder()
     .setDescription(`<@${user.id}>`)
     .setColor(11092453)
@@ -74,7 +81,10 @@ client.on("interactionCreate", async (interaction) => {
       value: `**Start:** ${start}\n**End:** ${end}\n**Reason:** __${reason}__`,
       inline: true
     });
+  
+// Dont change below this if you are changing the embed.
 
+  
   const options = { embeds: [embed], allowedMentions: { users: [user.id] } };
 
   try {
@@ -95,26 +105,25 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 let initialized = false;
+
 async function onReady() {
   if (initialized) return;
   initialized = true;
-
   console.log(`Logged in as ${client.user.tag}`);
-
   const appId = client.user.id;
   await clearGlobalCommands(appId);
   try { await client.guilds.fetch(); } catch (e) {}
-
   for (const [guildId, guild] of client.guilds.cache) {
     await registerCommandsForGuild(guildId);
   }
 }
 
 client.once("ready", onReady);
+
 app.get("/", (req, res) => res.send("Bot is alive"));
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-
   let renderUrl = process.env.RENDER_EXTERNAL_URL || process.env.EXTERNAL_URL || "";
   if (!renderUrl) renderUrl = `http://localhost:${port}`;
   else if (!renderUrl.startsWith("http")) renderUrl = `https://${renderUrl}`;
@@ -128,7 +137,6 @@ app.listen(port, () => {
       console.error("Ping failed:", err);
     }
   };
-
   doPing();
   setInterval(doPing, 60 * 1000);
 });
@@ -141,4 +149,3 @@ client.login(TOKEN).catch(err => {
   console.error("Login failed:", err);
   process.exit(1);
 });
-
