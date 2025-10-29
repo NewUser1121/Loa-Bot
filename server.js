@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import fetch from "node-fetch";
 import { CONFIG } from "./config.js";
@@ -18,7 +17,13 @@ export function startServer() {
     
     const pingServer = async () => {
       try {
-        await fetch(url);
+        if (process.env.RENDER_EXTERNAL_URL) {
+          await fetch(process.env.RENDER_EXTERNAL_URL);
+          console.log(`Pinged Render URL: ${process.env.RENDER_EXTERNAL_URL}`);
+        } else {
+          await fetch(url);
+          console.log(`Pinged local URL: ${url}`);
+        }
       } catch (err) {
         console.error(`Health check failed: ${err.message}`);
       }
