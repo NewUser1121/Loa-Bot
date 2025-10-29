@@ -1,7 +1,7 @@
 {
-  "name": "loa-discord-bot",
+  "name": "loa-bot",
   "version": "1.0.0",
-  "description": "A Discord bot that handles LOA submissions and keeps itself alive on Render.",
+  "description": "A Discord bot for managing Leave of Absence (LOA) requests",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -9,7 +9,13 @@
   },
   "dependencies": {
     "discord.js": "^14.16.3",
-    "express": "^4.19.2",
+    "express": "^4.21.1",
+    "mongoose": "^8.7.3",
     "node-fetch": "^3.3.2"
-  }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "",
+  "license": "ISC"
 }
